@@ -10,6 +10,16 @@ res_deps = {'50': (3, 4, 6, 3), '101': (3, 4, 23, 3), '152': (3, 8, 36, 3), '200
 units = res_deps['50']
 filter_list = [256, 512, 1024, 2048]
 
+def merge_dicts(*dict_args):
+    """
+    Given any number of dicts, shallow copy and merge into a new dict,
+    precedence goes to key value pairs in latter dicts.
+    """
+    result = {}
+    for dictionary in dict_args:
+        result.update(dictionary)
+    return result
+
 def residual_unit(data, num_filter, stride, dim_match, name):
     bn1   = mx.sym.BatchNorm(data=data, fix_gamma=False, eps=eps, use_global_stats=use_global_stats, name=name + '_bn1')
     act1  = mx.sym.Activation(data=bn1, act_type='relu', name=name + '_relu1')
@@ -180,7 +190,8 @@ def get_resnet_fpn_mask_test(num_classes=config.NUM_CLASSES, num_anchors=config.
         rpn_cls_prob_dict.update({'cls_prob_stride%s'%stride:rpn_cls_prob_reshape})
         rpn_bbox_pred_dict.update({'bbox_pred_stride%s'%stride:rpn_bbox_pred})
 
-    args_dict = dict(rpn_cls_prob_dict.items()+rpn_bbox_pred_dict.items())
+    #args_dict = dict(rpn_cls_prob_dict.items()+rpn_bbox_pred_dict.items())
+    args_dict = merge_dicts(rpn_cls_prob_dict, rpn_bbox_pred_dict)
     aux_dict = {'im_info':im_info,'name':'rois',
                 'op_type':'proposal_fpn','output_score':False,
                 'feat_stride':config.RPN_FEAT_STRIDE,'scales':tuple(config.ANCHOR_SCALES),
@@ -190,8 +201,8 @@ def get_resnet_fpn_mask_test(num_classes=config.NUM_CLASSES, num_anchors=config.
                 'rpn_min_size':config.TEST.RPN_MIN_SIZE,
                 'threshold':config.TEST.RPN_NMS_THRESH}
     # Proposal
-    rois = mx.symbol.Custom(**dict(args_dict.items()+aux_dict.items()))
-
+    #rois = mx.symbol.Custom(**dict(args_dict.items()+aux_dict.items()))
+    rois = merge_dicts(**merge_dicts(args_dict, aux_dict));
     # FPN roi pooling
     args_dict={}
     for s in config.RCNN_FEAT_STRIDE:
@@ -344,6 +355,7 @@ def get_resnet_fpn_rpn(num_anchors=config.NUM_ANCHORS):
     return group
 
 
+
 def get_resnet_fpn_rpn_test(num_anchors=config.NUM_ANCHORS):
     data = mx.symbol.Variable(name="data")
     im_info = mx.symbol.Variable(name="im_info")
@@ -395,7 +407,8 @@ def get_resnet_fpn_rpn_test(num_anchors=config.NUM_ANCHORS):
 
         rpn_cls_prob_dict.update({'cls_prob_stride%s' % stride: rpn_cls_prob_reshape})
         rpn_bbox_pred_dict.update({'bbox_pred_stride%s' % stride: rpn_bbox_pred})
-    args_dict = dict(rpn_cls_prob_dict.items()+rpn_bbox_pred_dict.items())
+#    args_dict = dict(rpn_cls_prob_dict.items()+rpn_bbox_pred_dict.items())
+    args_dict = merge_dicts(rpn_cls_prob_dict, rpn_bbox_pred_dict);
     aux_dict = {'im_info':im_info,'name':'rois',
                 'op_type':'proposal_fpn','output_score':True,
                 'feat_stride':config.RPN_FEAT_STRIDE,'scales':tuple(config.ANCHOR_SCALES),
@@ -405,7 +418,9 @@ def get_resnet_fpn_rpn_test(num_anchors=config.NUM_ANCHORS):
                 'rpn_min_size':config.TEST.RPN_MIN_SIZE,
                 'threshold':config.TEST.RPN_NMS_THRESH}
     # Proposal
-    group = mx.symbol.Custom(**dict(args_dict.items()+aux_dict.items()))
+    Proposal_dict = merge_dicts(args_dict, aux_dict);
+    #group = mx.symbol.Custom(**dict(args_dict.items()+aux_dict.items()))
+    group = mx.symbol.Custom(**Proposal_dict)
 
     # rois = group[0]
     # score = group[1]
@@ -500,7 +515,7 @@ def get_resnet_fpn_maskrcnn(num_classes=config.NUM_CLASSES):
     mask_deconv_act_list = []
     for stride in rcnn_feat_stride:
         if config.ROIALIGN:
-            roi_pool = mx.symbol.ROIAlign(
+            roi_pool = mx.symbol.contrib.ROIAlign(
                 name='roi_pool', data=conv_fpn_feat['stride%s'%stride], rois=rois['rois_stride%s' % stride],
                 pooled_size=(14, 14),
                 spatial_scale=1.0 / stride)

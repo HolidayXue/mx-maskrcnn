@@ -1,4 +1,5 @@
 import argparse
+import argparse
 import logging
 
 import mxnet as mx
@@ -35,7 +36,7 @@ def alternate_train(args, ctx, pretrained, epoch,
     for image_set in image_sets:
         test_rpn(args.network, args.dataset, image_set, args.root_path, args.dataset_path,
                  ctx[0], model_path+'/rpn1', rpn_epoch,
-                 vis=False, shuffle=False, thresh=0)
+                vis=False, shuffle=False, thresh=0)
 
     logging.info('########## TRAIN RCNN WITH IMAGENET INIT AND RPN DETECTION')
     train_maskrcnn(args.network, args.dataset, args.image_set, args.root_path, args.dataset_path,
@@ -104,7 +105,7 @@ def parse_args():
 
 def main():
     args = parse_args()
-    print 'Called with argument:', args
+    print ('Called with argument:', args)
     ctx = [mx.gpu(int(i)) for i in args.gpus.split(',')]
     alternate_train(args, ctx, args.pretrained, args.pretrained_epoch,
                     args.rpn_epoch, args.rpn_lr, args.rpn_lr_step,

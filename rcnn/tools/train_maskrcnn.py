@@ -4,7 +4,8 @@ import pprint
 import mxnet as mx
 import numpy as np
 import os.path as osp
-import cPickle as pkl
+import pickle as pkl
+import sys
 
 from ..config import config, default, generate_config
 from ..symbol import *
@@ -46,14 +47,14 @@ def train_maskrcnn(network, dataset, image_set, root_path, dataset_path,
         std_file = root_path + '/cache/' + dataset + '_roidb_std_' + maskrcnn_stage + '.pkl'
 
     if osp.exists(roidb_file) and osp.exists(mean_file) and osp.exists(std_file):
-        print 'Load ' + roidb_file
-        with open(roidb_file, 'r') as f:
+        print ('Load ' + roidb_file)
+        with open(roidb_file, 'rb') as f:
             roidb = pkl.load(f)
-        print 'Load ' + mean_file
-        with open(mean_file, 'r') as f:
+        print  ('Load ' + mean_file)
+        with open(mean_file, 'rb') as f:
             means = pkl.load(f)
-        print 'Load ' + std_file
-        with open(std_file, 'r') as f:
+        print  ('Load ' + std_file)
+        with open(std_file, 'rb') as f:
             stds = pkl.load(f)
     else:
         # load dataset and prepare imdb for training
@@ -77,7 +78,7 @@ def train_maskrcnn(network, dataset, image_set, root_path, dataset_path,
             num = len(roidb)
             filtered_roidb = [entry for entry in roidb if is_valid(entry)]
             num_after = len(filtered_roidb)
-            print 'filtered %d roidb entries: %d -> %d' % (num - num_after, num, num_after)
+            print ('filtered %d roidb entries: %d -> %d' % (num - num_after, num, num_after))
 
             return filtered_roidb
 
@@ -86,8 +87,8 @@ def train_maskrcnn(network, dataset, image_set, root_path, dataset_path,
         add_assign_targets(roidb)
         add_mask_targets(roidb)
         for file, obj in zip([roidb_file, mean_file, std_file], [roidb, means, stds]):
-            with open(file, 'w') as f:
-                pkl.dump(obj, f, -1)
+            with open(file, 'wb') as f:
+                pkl.dump(obj, f, pkl.HIGHEST_PROTOCOL)
 
     # load training data
     train_data = MaskROIIter(roidb, batch_size=input_batch_size, shuffle=not no_shuffle,
@@ -110,7 +111,7 @@ def train_maskrcnn(network, dataset, image_set, root_path, dataset_path,
     arg_shape_dict = dict(zip(sym.list_arguments(), arg_shape))
     out_shape_dict = zip(sym.list_outputs(), out_shape)
     aux_shape_dict = dict(zip(sym.list_auxiliary_states(), aux_shape))
-    print 'output shape'
+    print ('output shape')
     pprint.pprint(out_shape_dict)
 
     # load and initialize params
@@ -125,7 +126,7 @@ def train_maskrcnn(network, dataset, image_set, root_path, dataset_path,
             if k in data_shape_dict:
                 continue
             if k not in arg_params:
-                print 'init', k
+                print ('init', k)
                 arg_params[k] = mx.nd.zeros(shape=arg_shape_dict[k])
                 init_internal(k, arg_params[k])
                 if k in ['rcnn_fc_bbox_weight', 'bbox_pred_weight']:
@@ -139,7 +140,7 @@ def train_maskrcnn(network, dataset, image_set, root_path, dataset_path,
 
         for k in sym.list_auxiliary_states():
             if k not in aux_params:
-                print 'init', k
+                print ('init', k)
                 aux_params[k] = mx.nd.zeros(shape=aux_shape_dict[k])
                 init(k, aux_params[k])
 
@@ -159,6 +160,9 @@ def train_maskrcnn(network, dataset, image_set, root_path, dataset_path,
     # create solver
     data_names = [k[0] for k in train_data.provide_data]
     label_names = [k[0] for k in train_data.provide_label]
+    print(data_names)
+    print(label_names)
+   
     if train_shared:
         fixed_param_prefix = config.FIXED_PARAMS_SHARED
     else:
@@ -188,7 +192,7 @@ def train_maskrcnn(network, dataset, image_set, root_path, dataset_path,
     lr_epoch_diff = [epoch - begin_epoch for epoch in lr_epoch if epoch > begin_epoch]
     lr = base_lr * (lr_factor ** (len(lr_epoch) - len(lr_epoch_diff)))
     lr_iters = [int(epoch * len(roidb) / batch_size) for epoch in lr_epoch_diff]
-    print 'lr', lr, 'lr_epoch_diff', lr_epoch_diff, 'lr_iters', lr_iters
+    print ('lr', lr, 'lr_epoch_diff', lr_epoch_diff, 'lr_iters', lr_iters)
     lr_scheduler = mx.lr_scheduler.MultiFactorScheduler(lr_iters, lr_factor)
     # optimizer
     optimizer_params = {'momentum': 0.9,

@@ -1,0 +1,1 @@
+--network resnet_fpn --dataset Cityscape --image_set train --root_path model/res50-fpn/cityscape/alternate/ --pretrained model/resnet-50 --prefix model/res50-fpn/cityscape/alternate/ --pretrained_epoch 0 --gpu 0

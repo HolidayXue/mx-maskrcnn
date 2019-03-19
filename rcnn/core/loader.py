@@ -112,11 +112,11 @@ class MaskROIIter(mx.io.DataIter):
             self.ctx = [mx.cpu()]
         self.work_load_list = work_load_list
         self.aspect_grouping = aspect_grouping
-
+        
         # infer properties from roidb
         self.size = len(roidb)
         self.index = np.arange(self.size)
-
+        
         # decide data and label names (only for training)
         self.data_name = ['data']
         self.label_name = []
@@ -128,7 +128,7 @@ class MaskROIIter(mx.io.DataIter):
         for s in config.RCNN_FEAT_STRIDE:
             self.label_name.append('mask_target_stride%s' % s)
             self.label_name.append('mask_weight_stride%s' % s)
-
+        
         # status variable for synchronization between get_data and get_label
         self.cur = 0
         self.batch = None
@@ -208,7 +208,7 @@ class MaskROIIter(mx.io.DataIter):
         assert isinstance(work_load_list, list) and len(work_load_list) == len(ctx), \
             "Invalid settings for work load. "
         slices = _split_input_slice(self.batch_size, work_load_list)
-
+        
         im_array_list = []
         levels_data_list = []
         for islice in slices:
@@ -216,7 +216,7 @@ class MaskROIIter(mx.io.DataIter):
             im_array, levels_data = get_fpn_maskrcnn_batch(iroidb)
             im_array_list.append(im_array)
             levels_data_list.append(levels_data)
-
+        
         all_data, all_label = self._make_data_and_labels(im_array_list, levels_data_list)
         self.data = [mx.nd.array(all_data[name]) for name in self.data_name]
         self.label = [mx.nd.array(all_label[name]) for name in self.label_name]
